@@ -6,6 +6,7 @@ import random
 import json
 import difflib
 
+
 COUNTRIES = ['Afghanistan', 'Aland Islands', 'Albania', 'Algeria', 'American Samoa', 'Andorra', 'Angola', 'Anguilla',
              'Antarctica', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba', 'Australia', 'Austria', 'Azerbaijan',
              'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bermuda',
@@ -47,8 +48,8 @@ COUNTRIES = ['Afghanistan', 'Aland Islands', 'Albania', 'Algeria', 'American Sam
              'Wallis and Futuna', 'Yemen', 'Zambia', 'Zimbabwe']
 
 
-def delay_print(t):
-    typing_speed = 75  # wpm
+def delay_print(t, phase=90):
+    typing_speed = phase  # wpm
     for l in t:
         sys.stdout.write(l)
         sys.stdout.flush()
@@ -109,15 +110,16 @@ def get_user_input(user_id):
             else:
                 delay_print("Please write the country name again:")
                 country_name = input()
-        delay_print("Please choose the Number of the main reason you came to this country?")
+        delay_print("What is the Main reason you visited this country?")
+        print("(Pleas write the Number of the reason and not the reason itself)")
         print(json.dumps(OPTIONS, sort_keys=True, indent=4))
         attribute = int(input())
         user_input.append((user_id, country_name.lower(), OPTIONS[attribute].lower()))
         amount_of_countries -= 1
-        if not amount_of_countries:
+        if amount_of_countries:
             delay_print(f'Thanks! only {amount_of_countries} more to go \n')
         else:
-            delay_print("That's it! would. would you want to get a recommendation?")
+            delay_print("That's it! would you want to get a recommendation?")
     get_recommendation = input("y/n ?")
     return user_input, get_recommendation
 
@@ -148,15 +150,15 @@ def normalizer(df):
 def create_country_matrix(df):
     # Creating the Countries / Attributes matrix
     df_countries = pd.crosstab(df['Best'], df['Country'])
-    df_countries.to_excel('countries.xlsx')
-    return normalizer(df_countries)
+    return df_countries
+    # return normalizer(df_countries)
 
 
 def create_users_matrix(df):
     # Creating the Users / Attributes matrix
     df_users = pd.crosstab(df['user_id'], df['Best']).T
-    df_users.T.to_excel('users.xlsx')
-    return normalizer(df_users).T
+    return df_users.T
+    # return normalizer(df_users).T
 
 
 def create_numpy_matrix(df):
@@ -165,10 +167,10 @@ def create_numpy_matrix(df):
     The algorythm calculate all the raw data and gives a rating to each user based on community opinion for each country
     """
     # Creating the Countries / Attributes matrix
-    df_countries = create_country_matrix(df).values
+    df_countries = create_country_matrix(df)
     # Creating the Users / Attributes matrix
-    df_users = create_users_matrix(df).values
-    return np.dot(df_users, df_countries)
+    df_users = create_users_matrix(df)
+    return np.dot(df_users.values, df_countries.values), df_countries
 
 
 def get_user_and_countries_list(df):
@@ -227,8 +229,6 @@ def suggest(df, m, id):
     countries_the_user_visited = (df[df['user_id'] == id]['Country'].to_list())
     # user_series_in_matrix = m.loc[id].sort_values().iloc[-(len(countries_the_user_visited) * 2 + 1):-1]
     user_series_in_matrix = m.loc[[id]].sort_values(by=id, axis=1, ascending=False)
-    print(user_series_in_matrix)
-    print(countries_the_user_visited)
     suggestions = []
     for i, name in enumerate(user_series_in_matrix):
         rating = user_series_in_matrix.iloc[:, i].to_list()[0]
@@ -331,45 +331,51 @@ class MF():
 
 
 if __name__ == "__main__":
+    # Step 0 - Read the Data from Google Sheets
+    # gsheetid = "1HSIjDNlYd58u6IuLOwQkqvH4uRsxDNjYbLSRfXPDhfg"
+    # sheet_name = "Data"
+    # gsheet_url = "https://docs.google.com/spreadsheets/d/{}/gviz/tq?tqx=out:csv&sheet={}".format(gsheetid, sheet_name)
+    # df = pd.read_csv(gsheet_url)
     # Step 1 - Read the Data from the DB
     df = pd.read_excel('raw_data.xlsx')
     # Step 2 - Assign the User an Unique ID
     user_id = len(df['user_id'].unique()) + 1
     # Step 3 - Get input from the user
     # input_to_add, wants_to_get_suggestions = get_user_input(user_id)
-    input_to_add = [(user_id, 'israel', 'culture'), (user_id, 'italy', 'hiking & nature'),
-                    (user_id, 'iceland', 'hiking & nature')]
+    input_to_add = [(user_id, 'mexico', 'beach'),
+                    (user_id, 'philippines', 'beach'),
+                    (user_id, 'sri lanka', 'beach')]
     wants_to_get_suggestions = True
     # Step 4 - Update the DB with the user input
     df = update_raw_db(df, input_to_add)
     # Step 5 - Create a Matrix from the DB with the Ratings of each user for each country
-    R = create_numpy_matrix(df)
+    R, df_countries = create_numpy_matrix(df)
     # Step 6 - Create two matrices for the Factorization Based on Masses Wisdom Algorithm
     users_list, countries_list = get_user_and_countries_list(df)
     # Step 7 - Create the Matrix Building Block for the Training Algorithm
     building_block_matrix = create_matrix_building_block(R, df, users_list, countries_list)
     # Step 8 - Training the Data and using Matrix Factorization for getting the Final Matrix
-    mf = MF(R, K=10, alpha=0.1, beta=0.01, iterations=20)
+    mf = MF(R, K=10, alpha=0.1, beta=0.01, iterations=5000)
     training_process = mf.train()
     recommendation_matrix = mf.full_matrix()
     # Step 9 - Normalizing the Data again
     matrix = normalizer(pd.DataFrame(recommendation_matrix, columns=countries_list, index=users_list))
     # Step 10 (Optional) - Adding the Data to a new DB
-    # matrix.to_excel('predictions.xlsx')
+    matrix.to_excel('predictions.xlsx')
     # Step 11 - Suggest the user what countries to go
     if wants_to_get_suggestions:
         suggestion_one, suggestion_two, suggestion_three = suggest(df, matrix, user_id)
-        delay_print(f'Hurray! I found you a 3 places you should visit!')
-        delay_print(f'Some Drums please')
-        delay_print(f'🥁🥁🥁🥁🥁🥁🥁🥁🥁🥁')
-        delay_print(f'In the first place: \n {suggestion_one[0]}')
-        delay_print(f'In the second place: \n {suggestion_two[0]}')
-        delay_print(f'In the third place: \n {suggestion_three[0]}')
+        print([(suggestion_one[0], df_countries[suggestion_one[0]].sort_values().index[-1]),
+               ((suggestion_two[0], df_countries[suggestion_two[0]].sort_values().index[-1])),
+               ((suggestion_three[0], df_countries[suggestion_three[0]].sort_values().index[-1]))])
+        # delay_print(f'Hurray! I found you a 3 places you should visit!')
+        # delay_print(f'Some Drums please')
+        # delay_print(f'🥁🥁🥁🥁🥁🥁🥁🥁🥁🥁', 20)
+        # delay_print(f'In the first place: \n {suggestion_one[0]} for {df_countries[suggestion_one[0]].sort_values().index[-1]}')
+        # delay_print(f'In the second place: \n {suggestion_two[0]} for {df_countries[suggestion_two[0]].sort_values().index[-1]}')
+        # delay_print(f'In the third place: \n {suggestion_three[0]} for {df_countries[suggestion_three[0]].sort_values().index[-1]}')
 
     delay_print("Thanks for contributing the project! see you next time!")
-    # for row in building_block_matrix:
-    #     print(row)
-    # # Step 8 - Normalizing the Data to be between 1 - 5
-    # normalizer(pd.DataFrame(building_block_matrix, columns=countries_list, index=users_list)).to_excel('matrix.xlsx')
-    # for row in building_block_matrix:
-    #     print(row)
+
+
+
