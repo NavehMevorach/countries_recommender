@@ -365,15 +365,12 @@ if __name__ == "__main__":
     # Step 11 - Suggest the user what countries to go
     if wants_to_get_suggestions:
         suggestion_one, suggestion_two, suggestion_three = suggest(df, matrix, user_id)
-        print([(suggestion_one[0], df_countries[suggestion_one[0]].sort_values().index[-1]),
-               ((suggestion_two[0], df_countries[suggestion_two[0]].sort_values().index[-1])),
-               ((suggestion_three[0], df_countries[suggestion_three[0]].sort_values().index[-1]))])
-        # delay_print(f'Hurray! I found you a 3 places you should visit!')
-        # delay_print(f'Some Drums please')
-        # delay_print(f'🥁🥁🥁🥁🥁🥁🥁🥁🥁🥁', 20)
-        # delay_print(f'In the first place: \n {suggestion_one[0]} for {df_countries[suggestion_one[0]].sort_values().index[-1]}')
-        # delay_print(f'In the second place: \n {suggestion_two[0]} for {df_countries[suggestion_two[0]].sort_values().index[-1]}')
-        # delay_print(f'In the third place: \n {suggestion_three[0]} for {df_countries[suggestion_three[0]].sort_values().index[-1]}')
+        delay_print(f'Hurray! I found you a 3 places you should visit!')
+        delay_print(f'Some Drums please')
+        delay_print(f'🥁🥁🥁🥁🥁🥁🥁🥁🥁🥁', 20)
+        delay_print(f'In the first place: \n {suggestion_one[0]} for {df_countries[suggestion_one[0]].sort_values().index[-1]}')
+        delay_print(f'In the second place: \n {suggestion_two[0]} for {df_countries[suggestion_two[0]].sort_values().index[-1]}')
+        delay_print(f'In the third place: \n {suggestion_three[0]} for {df_countries[suggestion_three[0]].sort_values().index[-1]}')
 
     delay_print("Thanks for contributing the project! see you next time!")
 
