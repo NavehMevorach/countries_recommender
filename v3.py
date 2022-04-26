@@ -121,6 +121,8 @@ def get_user_input(user_id):
         else:
             delay_print("That's it! would you want to get a recommendation?")
     get_recommendation = input("y/n ?")
+    delay_print("Calculating...")
+    delay_print("It might take while, meanwhile you should take a coffee break...")
     return user_input, get_recommendation
 
 
@@ -130,8 +132,7 @@ def update_raw_db(df, data):
     """
     df2 = pd.DataFrame(data, columns=['user_id', 'Country', 'Best'])
     merged_df = pd.concat([df, df2], ignore_index=True, sort=False)
-    # TODO: Uncomment me
-    # merged_df.to_excel('raw_data.xlsx', index=False)
+    merged_df.to_excel('raw_data.xlsx', index=False)
     return merged_df
 
 
@@ -331,9 +332,10 @@ class MF():
 
 
 if __name__ == "__main__":
-    # Step 0 - Read the Data from Google Sheets
+    # TODO: If you dont have the Dataset you can uncomment the code below and import it from google sheets
+    # Step 1 (Alternative) - Read the Data from the DB
     # gsheetid = "1HSIjDNlYd58u6IuLOwQkqvH4uRsxDNjYbLSRfXPDhfg"
-    # sheet_name = "Data"
+    # sheet_name = "Sheet1"
     # gsheet_url = "https://docs.google.com/spreadsheets/d/{}/gviz/tq?tqx=out:csv&sheet={}".format(gsheetid, sheet_name)
     # df = pd.read_csv(gsheet_url)
     # Step 1 - Read the Data from the DB
@@ -341,11 +343,11 @@ if __name__ == "__main__":
     # Step 2 - Assign the User an Unique ID
     user_id = len(df['user_id'].unique()) + 1
     # Step 3 - Get input from the user
-    # input_to_add, wants_to_get_suggestions = get_user_input(user_id)
-    input_to_add = [(user_id, 'mexico', 'beach'),
-                    (user_id, 'philippines', 'beach'),
-                    (user_id, 'sri lanka', 'beach')]
-    wants_to_get_suggestions = True
+    input_to_add, wants_to_get_suggestions = get_user_input(user_id)
+    # input_to_add = [(user_id, 'mexico', 'beach'),
+    #                 (user_id, 'philippines', 'beach'),
+    #                 (user_id, 'sri lanka', 'beach')]
+    # wants_to_get_suggestions = True
     # Step 4 - Update the DB with the user input
     df = update_raw_db(df, input_to_add)
     # Step 5 - Create a Matrix from the DB with the Ratings of each user for each country
